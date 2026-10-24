@@ -82,22 +82,13 @@ resolve_var_file() {
     return 0
   fi
 
-  for base_path in "${REPO_ROOT}" "${GITHUB_WORKSPACE:-${REPO_ROOT}}" "${TERRAFORM_DIR}"; do
-    if [[ -f "${base_path}/${requested_path}" ]]; then
-      echo "${base_path}/${requested_path}"
+  for base_path in "${REPO_ROOT}" "${TERRAFORM_DIR}"; do
+    local candidate="${base_path}/${requested_path}"
+    if [[ -f "${candidate}" ]]; then
+      echo "${candidate}"
       return 0
     fi
   done
-
-  local filename
-  filename="$(basename "${requested_path}")"
-  local found_file
-  found_file="$(find "${REPO_ROOT}" -type f -name "${filename}" 2>/dev/null | head -n 1)"
-
-  if [[ -n "${found_file}" ]]; then
-    echo "${found_file}"
-    return 0
-  fi
 
   echo "Variables file not found: ${requested_path}" >&2
   return 1
