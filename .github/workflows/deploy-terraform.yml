@@ -31,16 +31,10 @@ jobs:
           terraform_version: 1.10.5
 
       - name: Terraform init
-        run: |
-          terraform init
-        working-directory: infra_terraform
+        run: terraform -chdir=terraform init
 
       - name: Terraform plan
-        run: |
-          terraform plan -var-file=terraform/example.tfvars
-        working-directory: infra_terraform
+        run: terraform -chdir=terraform plan -var-file=terraform/example.tfvars
 
-      # - name: Terraform apply
-      #   run: |
-      #     ./scripts/run-terraform.sh apply -var-file=terraform/example.tfvars -auto-approve
-      #   working-directory: infra_terraform
+      - name: Terraform apply
+        run: terraform -chdir=terraform apply -var-file=terraform/example.tfvars -auto-approve
