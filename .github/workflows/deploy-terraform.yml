@@ -30,6 +30,12 @@ jobs:
         with:
           terraform_version: 1.10.5
 
+      - name: Print current directory
+        run: |
+          pwd
+          ls -la
+          echo "Repo root: $GITHUB_WORKSPACE"
+
       - name: Run Terraform init via bash script
         run: |
           chmod +x scripts/run-terraform.sh
