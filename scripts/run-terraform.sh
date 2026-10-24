@@ -73,38 +73,47 @@ fi
 resolve_var_file() {
   local requested_path="${1:-}"
 
+  local workspace_root="${GITHUB_WORKSPACE:-${REPO_ROOT:-}}"
+  local candidate_paths=()
+
   if [[ -n "${requested_path}" ]]; then
-    if [[ -f "${requested_path}" ]]; then
-      printf '%s\n' "${requested_path}"
-      return 0
-    fi
+    candidate_paths+=(
+      "${requested_path}"
+      "${workspace_root}/${requested_path}"
+      "${REPO_ROOT}/${requested_path}"
+      "${TERRAFORM_DIR}/${requested_path}"
+    )
 
-    local candidate="${REPO_ROOT}/${requested_path}"
-    if [[ -f "${candidate}" ]]; then
-      printf '%s\n' "${candidate}"
-      return 0
-    fi
-
-    local relative_candidate="${TERRAFORM_DIR}/${requested_path}"
-    if [[ -f "${relative_candidate}" ]]; then
-      printf '%s\n' "${relative_candidate}"
-      return 0
-    fi
+    for candidate in "${candidate_paths[@]}"; do
+      if [[ -f "${candidate}" ]]; then
+        local abs_candidate
+        abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
+        printf '%s\n' "${abs_candidate}"
+        return 0
+      fi
+    done
 
     echo "Variables file not found: ${requested_path}" >&2
     return 1
   fi
 
   local default_candidates=(
+    "${workspace_root}/app_example/example.tfvars"
     "${REPO_ROOT}/app_example/example.tfvars"
+    "${TERRAFORM_DIR}/example.tfvars"
+    "${workspace_root}/terraform/example.tfvars"
     "${REPO_ROOT}/terraform/example.tfvars"
+    "${workspace_root}/app_example/*.tfvars"
     "${REPO_ROOT}/app_example/*.tfvars"
+    "${workspace_root}/terraform/*.tfvars"
     "${REPO_ROOT}/terraform/*.tfvars"
   )
 
   for candidate in "${default_candidates[@]}"; do
     if [[ -f "${candidate}" ]]; then
-      printf '%s\n' "${candidate}"
+      local abs_candidate
+      abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
+      printf '%s\n' "${abs_candidate}"
       return 0
     fi
   done
