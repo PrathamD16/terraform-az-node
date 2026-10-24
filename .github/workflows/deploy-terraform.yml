@@ -2,9 +2,22 @@ name: Deploy Terraform Infrastructure
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+    inputs:
+      terraform_action:
+        description: Select the Terraform action to run
+        required: true
+        default: plan
+        type: choice
+        options:
+          - init
+          - plan
+          - apply
+          - destroy
+      tfvar_file:
+        description: Relative path to the tfvars file, for example app_example/example.tfvars
+        required: false
+        default: app_example/example.tfvars
+        type: string
 
 jobs:
   terraform:
@@ -20,7 +33,7 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_FILE: app_example/example.tfvars
+      TF_VAR_FILE: ${{ inputs.tfvar_file || 'app_example/example.tfvars' }}
 
     steps:
       - name: Checkout repository
@@ -36,17 +49,10 @@ jobs:
           pwd
           ls -la
           echo "Repo root: $GITHUB_WORKSPACE"
+          echo "Selected action: ${{ inputs.terraform_action }}"
+          echo "Selected tfvars file: $TF_VAR_FILE"
 
-      - name: Run Terraform init via bash script
+      - name: Run Terraform via bash script
         run: |
           chmod +x scripts/run-terraform.sh
-          ./scripts/run-terraform.sh init
-
-      - name: Run Terraform plan via bash script
-        run: |
-          ./scripts/run-terraform.sh plan
-
-      # - name: Run Terraform apply via bash script
-      #   if: github.ref == 'refs/heads/main'
-      #   run: |
-      #     ./scripts/run-terraform.sh apply
+          ./scripts/run-terraform.sh "${{ inputs.terraform_action }}"
