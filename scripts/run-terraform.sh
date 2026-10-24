@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TERRAFORM_DIR="${SCRIPT_DIR}/../terraform"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ARM_CLIENT_ID="${ARM_CLIENT_ID:-${AZURE_CLIENT_ID:-}}"
 ARM_TENANT_ID="${ARM_TENANT_ID:-${AZURE_TENANT_ID:-}}"
@@ -69,6 +70,28 @@ else
   export ARM_SKIP_PROVIDER_REGISTRATION="true"
 fi
 
+append_default_var_file() {
+  local -a args=("$@")
+  local has_var_file=false
+
+  for arg in "${args[@]}"; do
+    if [[ "${arg}" == "-var-file="* || "${arg}" == "-var-file" ]]; then
+      has_var_file=true
+      break
+    fi
+  done
+
+  if [[ "${has_var_file}" == "false" ]]; then
+    if [[ -f "${REPO_ROOT}/terraform/example.tfvars" ]]; then
+      args+=("-var-file=${REPO_ROOT}/terraform/example.tfvars")
+    elif [[ -f "${TERRAFORM_DIR}/example.tfvars" ]]; then
+      args+=("-var-file=${TERRAFORM_DIR}/example.tfvars")
+    fi
+  fi
+
+  printf '%s\n' "${args[@]}"
+}
+
 cd "${TERRAFORM_DIR}"
 
 tf_command="${1:-plan}"
@@ -80,15 +103,27 @@ case "${tf_command}" in
     ;;
   plan)
     terraform init
-    terraform plan "$@"
+    plan_args=()
+    while IFS= read -r arg; do
+      plan_args+=("$arg")
+    done < <(append_default_var_file "$@")
+    terraform plan "${plan_args[@]}"
     ;;
   apply)
     terraform init
-    terraform apply "$@"
+    apply_args=()
+    while IFS= read -r arg; do
+      apply_args+=("$arg")
+    done < <(append_default_var_file "$@")
+    terraform apply "${apply_args[@]}"
     ;;
   destroy)
     terraform init
-    terraform destroy "$@"
+    destroy_args=()
+    while IFS= read -r arg; do
+      destroy_args+=("$arg")
+    done < <(append_default_var_file "$@")
+    terraform destroy "${destroy_args[@]}"
     ;;
   *)
     echo "Unsupported command: ${tf_command}"
