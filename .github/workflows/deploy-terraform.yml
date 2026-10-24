@@ -37,9 +37,9 @@ jobs:
 
       - name: Run Terraform plan via bash script
         run: |
-          ./scripts/run-terraform.sh plan -var-file=terraform/example.tfvars
+          ./scripts/run-terraform.sh plan -var-file=./terraform/example.tfvars
 
-      - name: Run Terraform apply via bash script
-        if: github.ref == 'refs/heads/main'
-        run: |
-          ./scripts/run-terraform.sh apply -var-file=terraform/example.tfvars -auto-approve
+      # - name: Run Terraform apply via bash script
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     ./scripts/run-terraform.sh apply -var-file=./terraform/example.tfvars -auto-approve
