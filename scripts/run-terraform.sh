@@ -70,27 +70,53 @@ else
   export ARM_SKIP_PROVIDER_REGISTRATION="true"
 fi
 
-append_default_var_file() {
-  local -a args=("$@")
-  local has_var_file=false
+resolve_var_file() {
+  local requested_path="${1:-}"
 
-  for arg in "${args[@]}"; do
-    if [[ "${arg}" == "-var-file="* || "${arg}" == "-var-file" ]]; then
-      has_var_file=true
-      break
+  if [[ -n "${requested_path}" ]]; then
+    if [[ -f "${requested_path}" ]]; then
+      printf '%s\n' "${requested_path}"
+      return 0
+    fi
+
+    local candidate="${REPO_ROOT}/${requested_path}"
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+
+    local relative_candidate="${TERRAFORM_DIR}/${requested_path}"
+    if [[ -f "${relative_candidate}" ]]; then
+      printf '%s\n' "${relative_candidate}"
+      return 0
+    fi
+
+    echo "Variables file not found: ${requested_path}" >&2
+    return 1
+  fi
+
+  local default_candidates=(
+    "${REPO_ROOT}/app_example/example.tfvars"
+    "${REPO_ROOT}/terraform/example.tfvars"
+    "${REPO_ROOT}/app_example/*.tfvars"
+    "${REPO_ROOT}/terraform/*.tfvars"
+  )
+
+  for candidate in "${default_candidates[@]}"; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
     fi
   done
 
-  if [[ "${has_var_file}" == "false" ]]; then
-    if [[ -f "${REPO_ROOT}/terraform/example.tfvars" ]]; then
-      args+=("-var-file=${REPO_ROOT}/terraform/example.tfvars")
-    elif [[ -f "${TERRAFORM_DIR}/example.tfvars" ]]; then
-      args+=("-var-file=${TERRAFORM_DIR}/example.tfvars")
-    fi
-  fi
-
-  printf '%s\n' "${args[@]}"
+  echo "No variables file found in app_example/ or terraform/." >&2
+  return 1
 }
+
+VAR_FILE="$(resolve_var_file "${TF_VAR_FILE:-}")"
+if [[ -z "${VAR_FILE}" ]]; then
+  exit 1
+fi
 
 cd "${TERRAFORM_DIR}"
 
@@ -103,27 +129,27 @@ case "${tf_command}" in
     ;;
   plan)
     terraform init
-    plan_args=()
-    while IFS= read -r arg; do
-      plan_args+=("$arg")
-    done < <(append_default_var_file "$@")
-    terraform plan "${plan_args[@]}"
+    if [[ -n "$*" ]]; then
+      terraform plan "$@"
+    else
+      terraform plan -var-file="${VAR_FILE}"
+    fi
     ;;
   apply)
     terraform init
-    apply_args=()
-    while IFS= read -r arg; do
-      apply_args+=("$arg")
-    done < <(append_default_var_file "$@")
-    terraform apply "${apply_args[@]}"
+    if [[ -n "$*" ]]; then
+      terraform apply "$@"
+    else
+      terraform apply -var-file="${VAR_FILE}"
+    fi
     ;;
   destroy)
     terraform init
-    destroy_args=()
-    while IFS= read -r arg; do
-      destroy_args+=("$arg")
-    done < <(append_default_var_file "$@")
-    terraform destroy "${destroy_args[@]}"
+    if [[ -n "$*" ]]; then
+      terraform destroy "$@"
+    else
+      terraform destroy -var-file="${VAR_FILE}"
+    fi
     ;;
   *)
     echo "Unsupported command: ${tf_command}"
