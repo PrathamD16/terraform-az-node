@@ -73,62 +73,33 @@ fi
 resolve_var_file() {
   local requested_path="${1:-}"
 
-  local workspace_root="${GITHUB_WORKSPACE:-${REPO_ROOT:-}}"
-  local candidate_paths=()
-
-  if [[ -n "${requested_path}" ]]; then
-    candidate_paths+=(
-      "${requested_path}"
-      "${workspace_root}/${requested_path}"
-      "${REPO_ROOT}/${requested_path}"
-      "${TERRAFORM_DIR}/${requested_path}"
-    )
-
-    for candidate in "${candidate_paths[@]}"; do
-      if [[ -f "${candidate}" ]]; then
-        local abs_candidate
-        abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
-        printf '%s\n' "${abs_candidate}"
-        return 0
-      fi
-    done
-
-    local file_name
-    file_name="$(basename "${requested_path}")"
-    local found_file
-    found_file="$(find "${workspace_root:-${REPO_ROOT}}" -type f -path "*${file_name}" 2>/dev/null | head -n 1)"
-
-    if [[ -n "${found_file}" && -f "${found_file}" ]]; then
-      printf '%s\n' "${found_file}"
-      return 0
-    fi
-
-    echo "Variables file not found: ${requested_path}" >&2
+  if [[ -z "${requested_path}" ]]; then
     return 1
   fi
 
-  local default_candidates=(
-    "${workspace_root}/app_example/example.tfvars"
-    "${REPO_ROOT}/app_example/example.tfvars"
-    "${TERRAFORM_DIR}/example.tfvars"
-    "${workspace_root}/terraform/example.tfvars"
-    "${REPO_ROOT}/terraform/example.tfvars"
-    "${workspace_root}/app_example/*.tfvars"
-    "${REPO_ROOT}/app_example/*.tfvars"
-    "${workspace_root}/terraform/*.tfvars"
-    "${REPO_ROOT}/terraform/*.tfvars"
-  )
+  if [[ -f "${requested_path}" ]]; then
+    echo "${requested_path}"
+    return 0
+  fi
 
-  for candidate in "${default_candidates[@]}"; do
-    if [[ -f "${candidate}" ]]; then
-      local abs_candidate
-      abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
-      printf '%s\n' "${abs_candidate}"
+  for base_path in "${REPO_ROOT}" "${GITHUB_WORKSPACE:-${REPO_ROOT}}" "${TERRAFORM_DIR}"; do
+    if [[ -f "${base_path}/${requested_path}" ]]; then
+      echo "${base_path}/${requested_path}"
       return 0
     fi
   done
 
-  echo "No variables file found in app_example/ or terraform/." >&2
+  local filename
+  filename="$(basename "${requested_path}")"
+  local found_file
+  found_file="$(find "${REPO_ROOT}" -type f -name "${filename}" 2>/dev/null | head -n 1)"
+
+  if [[ -n "${found_file}" ]]; then
+    echo "${found_file}"
+    return 0
+  fi
+
+  echo "Variables file not found: ${requested_path}" >&2
   return 1
 }
 
