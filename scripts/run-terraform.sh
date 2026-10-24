@@ -93,6 +93,16 @@ resolve_var_file() {
       fi
     done
 
+    local file_name
+    file_name="$(basename "${requested_path}")"
+    local found_file
+    found_file="$(find "${workspace_root:-${REPO_ROOT}}" -type f -path "*${file_name}" 2>/dev/null | head -n 1)"
+
+    if [[ -n "${found_file}" && -f "${found_file}" ]]; then
+      printf '%s\n' "${found_file}"
+      return 0
+    fi
+
     echo "Variables file not found: ${requested_path}" >&2
     return 1
   fi

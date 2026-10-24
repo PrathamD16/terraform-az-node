@@ -61,7 +61,7 @@ jobs:
           echo "Selected action: ${{ inputs.terraform_action }}"
           echo "Selected tfvars file: $TF_VAR_FILE"
 
-      - name: Run Terraform via bash script
+      - name: Run Terraform ${{ inputs.terraform_action }}
         run: |
           chmod +x scripts/run-terraform.sh
           ./scripts/run-terraform.sh "${{ inputs.terraform_action }}"
