@@ -72,25 +72,95 @@ fi
 
 resolve_var_file() {
   local requested_path="${1:-}"
+  local workspace_root="${GITHUB_WORKSPACE:-${REPO_ROOT:-}}"
+  local candidate_paths=()
 
-  if [[ -z "${requested_path}" ]]; then
+  if [[ -n "${requested_path}" ]]; then
+    candidate_paths+=(
+      "${requested_path}"
+      "${workspace_root}/${requested_path}"
+      "${REPO_ROOT}/${requested_path}"
+      "${TERRAFORM_DIR}/${requested_path}"
+      "${REPO_ROOT}/terraform/${requested_path}"
+      "${workspace_root}/terraform/${requested_path}"
+      "${REPO_ROOT}/${requested_path#./}"
+      "${workspace_root}/${requested_path#./}"
+    )
+
+    for candidate in "${candidate_paths[@]}"; do
+      if [[ -f "${candidate}" ]]; then
+        local abs_candidate
+        abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
+        printf '%s\n' "${abs_candidate}"
+        return 0
+      fi
+    done
+
+    local file_name="$(basename "${requested_path}")"
+    local found_file
+    found_file="$(find "${workspace_root:-${REPO_ROOT}}" -type f -path "*${file_name}" 2>/dev/null | head -n 1)"
+
+    if [[ -n "${found_file}" && -f "${found_file}" ]]; then
+      printf '%s\n' "${found_file}"
+      return 0
+    fi
+
+    echo "Variables file not found: ${requested_path}" >&2
     return 1
   fi
 
-  if [[ -f "${requested_path}" ]]; then
-    echo "${requested_path}"
-    return 0
+  local env_names=()
+  if [[ -n "${TF_ENVIRONMENT:-}" ]]; then
+    env_names+=("${TF_ENVIRONMENT}")
+  fi
+  if [[ -n "${ENVIRONMENT:-}" ]]; then
+    env_names+=("${ENVIRONMENT}")
+  fi
+  if [[ -n "${GITHUB_EVENT_INPUTS_environment:-}" ]]; then
+    env_names+=("${GITHUB_EVENT_INPUTS_environment}")
+  fi
+  if [[ -n "${GITHUB_REF_NAME:-}" ]]; then
+    env_names+=("${GITHUB_REF_NAME}")
   fi
 
-  for base_path in "${REPO_ROOT}" "${TERRAFORM_DIR}"; do
-    local candidate="${base_path}/${requested_path}"
+  local default_candidates=()
+  for env_name in "${env_names[@]}"; do
+    if [[ -n "${env_name}" ]]; then
+      default_candidates+=(
+        "${workspace_root}/${env_name}/config.tfvars"
+        "${REPO_ROOT}/${env_name}/config.tfvars"
+        "${workspace_root}/terraform/${env_name}/config.tfvars"
+        "${REPO_ROOT}/terraform/${env_name}/config.tfvars"
+      )
+    fi
+  done
+
+  local search_roots=(
+    "${workspace_root}"
+    "${REPO_ROOT}"
+    "${TERRAFORM_DIR}"
+  )
+
+  for root in "${search_roots[@]}"; do
+    if [[ -d "${root}" ]]; then
+      while IFS= read -r tfvars_file; do
+        if [[ -n "${tfvars_file}" ]]; then
+          default_candidates+=("${tfvars_file}")
+        fi
+      done < <(find "${root}" -type f -name "config.tfvars" -not -path "*/.terraform/*" 2>/dev/null | sort)
+    fi
+  done
+
+  for candidate in "${default_candidates[@]}"; do
     if [[ -f "${candidate}" ]]; then
-      echo "${candidate}"
+      local abs_candidate
+      abs_candidate="$(cd "$(dirname "${candidate}")" && pwd)/$(basename "${candidate}")"
+      printf '%s\n' "${abs_candidate}"
       return 0
     fi
   done
 
-  echo "Variables file not found: ${requested_path}" >&2
+  echo "No variables file found under a config folder or any config.tfvars file in the repo." >&2
   return 1
 }
 
