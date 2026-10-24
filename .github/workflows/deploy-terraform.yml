@@ -1,0 +1,47 @@
+name: Deploy Terraform Infrastructure
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+
+      # - name: Terraform init
+      #   run: |
+      #     chmod +x scripts/run-terraform.sh
+      #     ./scripts/run-terraform.sh init
+      #   working-directory: infra_terraform
+
+      - name: Terraform plan
+        run: |
+          ./scripts/run-terraform.sh plan -var-file=terraform/example.tfvars
+        working-directory: infra_terraform
+
+      # - name: Terraform apply
+      #   run: |
+      #     ./scripts/run-terraform.sh apply -var-file=terraform/example.tfvars -auto-approve
+      #   working-directory: infra_terraform
