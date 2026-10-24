@@ -32,13 +32,12 @@ jobs:
 
       - name: Terraform init
         run: |
-          chmod +x scripts/run-terraform.sh
-          ./scripts/run-terraform.sh init
+          terraform init
         working-directory: infra_terraform
 
       - name: Terraform plan
         run: |
-          ./scripts/run-terraform.sh plan -var-file=terraform/example.tfvars
+          terraform plan -var-file=terraform/example.tfvars
         working-directory: infra_terraform
 
       # - name: Terraform apply
