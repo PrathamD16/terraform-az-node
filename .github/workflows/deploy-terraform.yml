@@ -13,11 +13,20 @@ on:
           - plan
           - apply
           - destroy
-      tfvar_file:
-        description: Relative path to the tfvars file, for example app_example/example.tfvars
-        required: false
-        default: app_example/example.tfvars
-        type: string
+      environment:
+        description: Select the environment to deploy to
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      # tfvar_file:
+      #   description: Relative path to the tfvars file, for example app_example/example.tfvars
+      #   required: false
+      #   default: app_example/example.tfvars
+      #   type: string
 
 jobs:
   terraform:
@@ -33,7 +42,7 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_FILE: ${{ inputs.tfvar_file || 'app_example/example.tfvars' }}
+      TF_VAR_FILE: ${{ inputs.environment }}/config.tfvars
 
     steps:
       - name: Checkout repository
