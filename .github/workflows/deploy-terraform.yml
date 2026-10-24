@@ -30,11 +30,11 @@ jobs:
         with:
           terraform_version: 1.10.5
 
-      # - name: Terraform init
-      #   run: |
-      #     chmod +x scripts/run-terraform.sh
-      #     ./scripts/run-terraform.sh init
-      #   working-directory: infra_terraform
+      - name: Terraform init
+        run: |
+          chmod +x scripts/run-terraform.sh
+          ./scripts/run-terraform.sh init
+        working-directory: infra_terraform
 
       - name: Terraform plan
         run: |
