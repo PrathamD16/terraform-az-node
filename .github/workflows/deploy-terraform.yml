@@ -20,7 +20,7 @@ on:
         type: choice
         options:
           - dev
-          - staging
+          - stg
           - prod
 
 jobs:
@@ -48,9 +48,36 @@ jobs:
         with:
           terraform_version: 1.10.5
 
+      # - name: Resolve tfvars file
+      #   shell: bash
+      #   run: |
+      #     ENV_NAME="${{ inputs.environment }}"
+      #     CANDIDATES=(
+      #       "${ENV_NAME}/config.tfvars"
+      #       "terraform/${ENV_NAME}/config.tfvars"
+      #       "${ENV_NAME}/terraform.tfvars"
+      #       "terraform/${ENV_NAME}/terraform.tfvars"
+      #     )
+
+      #     FOUND=""
+      #     for candidate in "${CANDIDATES[@]}"; do
+      #       if [ -f "$candidate" ]; then
+      #         FOUND="$candidate"
+      #         break
+      #       fi
+      #     done
+
+      #     if [ -z "$FOUND" ]; then
+      #       echo "No tfvars file found for environment: ${ENV_NAME}"
+      #       find . -maxdepth 4 -type f \( -name 'config.tfvars' -o -name '*.tfvars' -o -name '*.tfvars.example' \) | sort
+      #       exit 1
+      #     fi
+
+      #     echo "TF_VAR_FILE=${FOUND}" >> "$GITHUB_ENV"
+      #     echo "Resolved TF_VAR_FILE=${FOUND}"
+
       - name: Workspace Info
         run: |
-          echo "${TF_VAR_FILE}"
           echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
           echo "Current directory: $(pwd)"
           echo "List files:"
@@ -62,7 +89,8 @@ jobs:
           ls -la
           echo "Repo root: $GITHUB_WORKSPACE"
           echo "Selected action: ${{ inputs.terraform_action }}"
-          echo "Selected tfvars file: $TF_VAR_FILE"
+          echo "Selected environment: ${{ inputs.environment }}"
+          echo "Selected tfvars file: ${TF_VAR_FILE}"
 
       - name: Run Terraform ${{ inputs.terraform_action }}
         run: |
