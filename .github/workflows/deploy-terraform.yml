@@ -37,7 +37,7 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_FILE: terraform/terraform.tfvars.example
+      TF_VAR_FILE: terraform/${{ inputs.environment }}/config.tfvars
 
     steps:
       - name: Checkout repository
