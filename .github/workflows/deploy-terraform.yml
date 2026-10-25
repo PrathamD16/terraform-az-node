@@ -37,7 +37,7 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_FILE: ${{ inputs.environment }}/config.tfvars
+      TF_VAR_FILE: terraform/${{ inputs.environment }}/config.tfvars
 
     steps:
       - name: Checkout repository
@@ -50,6 +50,7 @@ jobs:
 
       - name: Workspace Info
         run: |
+          echo "${TF_VAR_FILE}"
           echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
           echo "Current directory: $(pwd)"
           echo "List files:"
