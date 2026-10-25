@@ -75,6 +75,8 @@ resolve_var_file() {
   local workspace_root="${GITHUB_WORKSPACE:-${REPO_ROOT:-}}"
   local candidate_paths=()
 
+  echo "Requested Path: ${requested_path}"
+
   if [[ -n "${requested_path}" ]]; then
     candidate_paths+=(
       "${requested_path}"
@@ -99,6 +101,9 @@ resolve_var_file() {
     local file_name="$(basename "${requested_path}")"
     local found_file
     found_file="$(find "${workspace_root:-${REPO_ROOT}}" -type f -path "*${file_name}" 2>/dev/null | head -n 1)"
+
+    echo "file_name: ${file_name}"
+    echo "found_file: ${found_file}"
 
     if [[ -n "${found_file}" && -f "${found_file}" ]]; then
       printf '%s\n' "${found_file}"
@@ -173,6 +178,9 @@ cd "${TERRAFORM_DIR}"
 
 tf_command="${1:-plan}"
 shift || true
+
+echo "Terraform directory: ${TERRAFORM_DIR}"
+echo "Using variables file: ${VAR_FILE}"
 
 case "${tf_command}" in
   init)
