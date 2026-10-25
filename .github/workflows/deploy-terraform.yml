@@ -29,10 +29,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    defaults:
-      run:
-        working-directory: ./infra_terraform
-
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -45,6 +41,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Determine project directory
+        shell: bash
+        run: |
+          PROJECT_DIR="$GITHUB_WORKSPACE"
+          if [ -d "$GITHUB_WORKSPACE/infra_terraform" ]; then
+            PROJECT_DIR="$GITHUB_WORKSPACE/infra_terraform"
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project directory: $PROJECT_DIR"
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -53,6 +59,7 @@ jobs:
       - name: Resolve tfvars file
         shell: bash
         run: |
+          cd "${PROJECT_DIR:-$GITHUB_WORKSPACE}"
           ENV_NAME="${{ inputs.environment }}"
           CANDIDATES=(
             "terraform/${ENV_NAME}/config.tfvars"
@@ -94,5 +101,6 @@ jobs:
 
       - name: Run Terraform ${{ inputs.terraform_action }}
         run: |
+          cd "${PROJECT_DIR:-$GITHUB_WORKSPACE}"
           chmod +x scripts/run-terraform.sh
           ./scripts/run-terraform.sh "${{ inputs.terraform_action }}"
