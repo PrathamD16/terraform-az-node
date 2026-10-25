@@ -37,7 +37,6 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      
 
     steps:
       - name: Checkout repository
@@ -53,10 +52,8 @@ jobs:
         run: |
           ENV_NAME="${{ inputs.environment }}"
           CANDIDATES=(
-            "${ENV_NAME}/config.tfvars"
             "terraform/${ENV_NAME}/config.tfvars"
-            "${ENV_NAME}/terraform.tfvars"
-            "terraform/${ENV_NAME}/terraform.tfvars"
+            "${ENV_NAME}/config.tfvars"
           )
 
           FOUND=""
@@ -66,8 +63,6 @@ jobs:
               break
             fi
           done
-
-          echo "Resolved TF_VAR_FILE=${FOUND}"
 
           if [ -z "$FOUND" ]; then
             echo "No tfvars file found for environment: ${ENV_NAME}"
