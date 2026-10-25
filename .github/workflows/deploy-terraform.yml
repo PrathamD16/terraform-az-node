@@ -4,17 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       terraform_action:
-        description: Select the Terraform action to run
+        description: Select Terraform action
         required: true
         default: plan
         type: choice
         options:
-          - init
           - plan
           - apply
           - destroy
       environment:
-        description: Select the environment to deploy to
+        description: Select environment
         required: true
         default: dev
         type: choice
@@ -29,78 +28,34 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     env:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-      TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-      TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_ENVIRONMENT: ${{ inputs.environment }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Determine project directory
-        shell: bash
-        run: |
-          PROJECT_DIR="$GITHUB_WORKSPACE"
-          if [ -d "$GITHUB_WORKSPACE/infra_terraform" ]; then
-            PROJECT_DIR="$GITHUB_WORKSPACE/infra_terraform"
-          fi
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project directory: $PROJECT_DIR"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.10.5
 
-      - name: Resolve tfvars file
+      - name: Show resolved config path
         shell: bash
         run: |
-          cd "${PROJECT_DIR:-$GITHUB_WORKSPACE}"
-          ENV_NAME="${{ inputs.environment }}"
-          CANDIDATES=(
-            "terraform/${ENV_NAME}/config.tfvars"
-            "${ENV_NAME}/config.tfvars"
-          )
-
-          FOUND=""
-          for candidate in "${CANDIDATES[@]}"; do
-            if [ -f "$candidate" ]; then
-              FOUND="$candidate"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND" ]; then
-            echo "No tfvars file found for environment: ${ENV_NAME}"
-            find . -maxdepth 4 -type f \( -name 'config.tfvars' -o -name '*.tfvars' -o -name '*.tfvars.example' \) | sort
-            exit 1
-          fi
-
-          echo "TF_VAR_FILE=${FOUND}" >> "$GITHUB_ENV"
-          echo "Resolved TF_VAR_FILE=${FOUND}"
-
-      - name: Workspace Info
-        run: |
-          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          echo "Current directory: $(pwd)"
-          echo "List files:"
+          echo "Environment: ${{ inputs.environment }}"
+          echo "Terraform config file: terraform/configurations/${{ inputs.environment }}/config.tfvars"
           ls -la
+          ls -la terraform
+          ls -la terraform/configurations
+          ls -la "terraform/configurations/${{ inputs.environment }}"
 
-      - name: Print current directory
+      - name: Run Terraform
+        shell: bash
         run: |
-          pwd
-          ls -la
-          echo "Repo root: $GITHUB_WORKSPACE"
-          echo "Selected action: ${{ inputs.terraform_action }}"
-          echo "Selected environment: ${{ inputs.environment }}"
-          echo "Selected tfvars file: ${TF_VAR_FILE}"
-
-      - name: Run Terraform ${{ inputs.terraform_action }}
-        run: |
-          cd "${PROJECT_DIR:-$GITHUB_WORKSPACE}"
           chmod +x scripts/run-terraform.sh
-          ./scripts/run-terraform.sh "${{ inputs.terraform_action }}"
+          ./scripts/run-terraform.sh "${{ inputs.terraform_action }}" "${{ inputs.environment }}"
