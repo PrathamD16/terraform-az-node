@@ -37,7 +37,7 @@ jobs:
       TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
       TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
       TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_FILE: terraform/${{ inputs.environment }}/config.tfvars
+      
 
     steps:
       - name: Checkout repository
@@ -48,33 +48,35 @@ jobs:
         with:
           terraform_version: 1.10.5
 
-      # - name: Resolve tfvars file
-      #   shell: bash
-      #   run: |
-      #     ENV_NAME="${{ inputs.environment }}"
-      #     CANDIDATES=(
-      #       "${ENV_NAME}/config.tfvars"
-      #       "terraform/${ENV_NAME}/config.tfvars"
-      #       "${ENV_NAME}/terraform.tfvars"
-      #       "terraform/${ENV_NAME}/terraform.tfvars"
-      #     )
+      - name: Resolve tfvars file
+        shell: bash
+        run: |
+          ENV_NAME="${{ inputs.environment }}"
+          CANDIDATES=(
+            "${ENV_NAME}/config.tfvars"
+            "terraform/${ENV_NAME}/config.tfvars"
+            "${ENV_NAME}/terraform.tfvars"
+            "terraform/${ENV_NAME}/terraform.tfvars"
+          )
 
-      #     FOUND=""
-      #     for candidate in "${CANDIDATES[@]}"; do
-      #       if [ -f "$candidate" ]; then
-      #         FOUND="$candidate"
-      #         break
-      #       fi
-      #     done
+          FOUND=""
+          for candidate in "${CANDIDATES[@]}"; do
+            if [ -f "$candidate" ]; then
+              FOUND="$candidate"
+              break
+            fi
+          done
 
-      #     if [ -z "$FOUND" ]; then
-      #       echo "No tfvars file found for environment: ${ENV_NAME}"
-      #       find . -maxdepth 4 -type f \( -name 'config.tfvars' -o -name '*.tfvars' -o -name '*.tfvars.example' \) | sort
-      #       exit 1
-      #     fi
+          echo "Resolved TF_VAR_FILE=${FOUND}"
 
-      #     echo "TF_VAR_FILE=${FOUND}" >> "$GITHUB_ENV"
-      #     echo "Resolved TF_VAR_FILE=${FOUND}"
+          if [ -z "$FOUND" ]; then
+            echo "No tfvars file found for environment: ${ENV_NAME}"
+            find . -maxdepth 4 -type f \( -name 'config.tfvars' -o -name '*.tfvars' -o -name '*.tfvars.example' \) | sort
+            exit 1
+          fi
+
+          echo "TF_VAR_FILE=${FOUND}" >> "$GITHUB_ENV"
+          echo "Resolved TF_VAR_FILE=${FOUND}"
 
       - name: Workspace Info
         run: |
